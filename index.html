@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ 鉱産資源・電力クイズ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+:root {
+  --primary: #b7410e;
+  --primary-light: #e8622a;
+  --primary-dark: #7a2a06;
+  --accent: #1565c0;
+  --gold: #f9a825;
+  --gold-dark: #c6791a;
+  --parchment: #fdf3e7;
+  --parchment2: #fae0c0;
+  --ink: #1e0e00;
+  --success: #2e7d32;
+  --danger: #c62828;
+  --shadow: 0 4px 24px rgba(100,30,0,0.18);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: #1a0800;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0 48px;
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(183,65,14,0.35) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 80%, rgba(21,101,192,0.2) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(232,98,42,0.03) 44px, rgba(232,98,42,0.03) 45px),
+    #1a0800;
+  pointer-events: none; z-index: 0;
+}
+
+/* ===== HUD ===== */
+#hud {
+  position: sticky; top: 0; z-index: 100;
+  width: 100%; max-width: 540px;
+  background: linear-gradient(135deg, #1a0800 0%, #2e1200 100%);
+  border-bottom: 2px solid var(--primary);
+  padding: 10px 16px 8px; display: none;
+}
+.hud-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.hud-level { font-family:'Kaisei Decol',serif; font-size:0.95rem; color:#ffb07a; font-weight:700; }
+.hud-title-badge { font-size:0.7rem; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; padding:2px 10px; border-radius:999px; font-weight:700; }
+.hud-score-chips { display:flex; gap:8px; }
+.hud-chip { font-size:0.78rem; font-weight:700; padding:2px 10px; border-radius:999px; }
+.hud-chip.ok { background:rgba(46,125,50,0.25); color:#81c784; }
+.hud-chip.ng { background:rgba(198,40,40,0.25); color:#ef9a9a; }
+.exp-bar-wrap { display:flex; align-items:center; gap:8px; }
+.exp-label { font-size:0.7rem; color:#ffb07a; white-space:nowrap; }
+.exp-bar-bg { flex:1; height:8px; background:rgba(255,255,255,0.1); border-radius:999px; overflow:hidden; }
+.exp-bar-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--primary-light)); border-radius:999px; transition:width 0.6s cubic-bezier(.4,0,.2,1); }
+
+/* ===== レベルアップ ===== */
+#levelup-overlay {
+  display:none; position:fixed; inset:0; z-index:999;
+  background:rgba(26,8,0,0.9);
+  align-items:center; justify-content:center; flex-direction:column; text-align:center;
+}
+#levelup-overlay.show { display:flex; animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+.levelup-ring {
+  width:160px; height:160px; border-radius:50%;
+  background:radial-gradient(circle,rgba(232,98,42,0.3) 0%,transparent 70%);
+  display:flex; align-items:center; justify-content:center; margin-bottom:20px;
+  animation:ringPulse 1s ease-in-out infinite;
+}
+@keyframes ringPulse { 0%,100%{box-shadow:0 0 0 0 rgba(232,98,42,0.4);}50%{box-shadow:0 0 0 20px rgba(232,98,42,0);} }
+.levelup-emoji { font-size:5rem; }
+.levelup-text { font-family:'Kaisei Decol',serif; color:#ffb07a; font-size:2rem; font-weight:700; text-shadow:0 0 20px rgba(232,98,42,0.8); margin-bottom:8px; }
+.levelup-level { font-size:1rem; color:#ffa060; margin-bottom:12px; }
+.levelup-title { font-size:1.1rem; color:#ffb07a; background:rgba(232,98,42,0.1); border:1px solid rgba(232,98,42,0.3); padding:8px 24px; border-radius:999px; margin-bottom:24px; }
+.btn-levelup-ok { padding:12px 40px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:6px; font-size:1rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; }
+
+/* ===== 称号 ===== */
+#title-overlay {
+  display:none; position:fixed; inset:0; z-index:998;
+  background:rgba(26,8,0,0.92);
+  align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:24px;
+}
+#title-overlay.show { display:flex; animation:fadeIn 0.4s ease; }
+.title-scroll { background:var(--parchment); border:3px solid var(--primary); border-radius:8px; padding:32px 28px; max-width:320px; width:100%; }
+.title-scroll::before { content:'✦ ✦ ✦'; font-size:0.7rem; color:var(--primary); letter-spacing:6px; display:block; margin-bottom:16px; }
+.title-new { font-size:0.75rem; color:var(--danger); font-weight:700; letter-spacing:0.1em; }
+.title-main { font-family:'Kaisei Decol',serif; font-size:1.8rem; color:var(--ink); margin:8px 0; }
+.title-emoji { font-size:2.5rem; margin:8px 0; }
+.title-desc { font-size:0.85rem; color:#5a2a0e; line-height:1.6; margin-top:8px; }
+.btn-title-ok { margin-top:20px; padding:10px 32px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:6px; font-size:0.95rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; }
+
+/* ===== INTRO ===== */
+#intro-screen { width:100%; display:flex; flex-direction:column; align-items:center; padding:48px 16px 60px; position:relative; z-index:1; }
+.intro-emblem { font-size:5rem; margin-bottom:8px; filter:drop-shadow(0 4px 16px rgba(232,98,42,0.5)); animation:float 3s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);} }
+.intro-title { font-family:'Kaisei Decol',serif; font-size:1.8rem; color:#ffb07a; text-shadow:0 2px 12px rgba(232,98,42,0.4); margin-bottom:4px; text-align:center; }
+.intro-sub { color:#ffa060; font-size:0.85rem; margin-bottom:28px; text-align:center; }
+.intro-card { width:100%; max-width:340px; background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:20px; margin-bottom:28px; text-align:center; }
+.intro-tags { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:16px; }
+.itag { padding:4px 12px; border-radius:999px; font-size:0.78rem; font-weight:700; background:rgba(183,65,14,0.12); color:var(--primary-dark); border:1px solid rgba(183,65,14,0.25); }
+.intro-desc { font-size:0.88rem; color:#5a2a0e; line-height:1.8; }
+.btn-start { padding:16px 48px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:8px; font-family:'Kaisei Decol',serif; font-size:1.2rem; font-weight:700; cursor:pointer; box-shadow:0 4px 20px rgba(232,98,42,0.4); transition:all 0.2s; letter-spacing:0.05em; }
+.btn-start:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(232,98,42,0.5); }
+
+/* ===== QUIZ ===== */
+#quiz-screen { display:none; width:100%; max-width:540px; padding:16px 0 0; position:relative; z-index:1; }
+.section-badge { display:inline-block; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; font-size:0.7rem; font-weight:700; padding:3px 14px; border-radius:999px; margin-bottom:8px; letter-spacing:0.05em; }
+.q-card { background:var(--parchment); border-radius:6px; padding:28px 20px 20px; box-shadow:var(--shadow),inset 0 0 0 1px rgba(183,65,14,0.18); border-top:3px solid var(--primary); margin:0 16px; animation:cardIn 0.35s cubic-bezier(.4,0,.2,1); }
+@keyframes cardIn { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+.q-meta { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.q-num { font-size:0.75rem; color:var(--primary); }
+.q-type-badge { font-size:0.68rem; padding:2px 8px; border-radius:999px; font-weight:700; }
+.q-type-badge.choice { background:#fff8e1; color:var(--gold-dark); }
+.q-type-badge.text   { background:#fdf3e7; color:var(--primary-dark); }
+.q-text { font-family:'Kaisei Decol',serif; font-size:1.05rem; line-height:1.7; color:var(--ink); margin-bottom:18px; }
+
+/* 棒グラフ */
+.chart-wrap { background:white; border:2px solid rgba(183,65,14,0.2); border-radius:8px; padding:14px 12px 10px; margin-bottom:14px; }
+.chart-title { font-size:0.75rem; color:var(--primary-dark); font-weight:700; margin-bottom:10px; text-align:center; }
+.chart-bar-row { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+.chart-bar-label { font-size:0.75rem; color:var(--ink); width:88px; flex-shrink:0; text-align:right; }
+.chart-bar-bg { flex:1; height:22px; background:#f5ede4; border-radius:4px; overflow:hidden; }
+.chart-bar-fill { height:100%; border-radius:4px; display:flex; align-items:center; padding-left:6px; font-size:0.7rem; color:white; font-weight:700; white-space:nowrap; transition:width 0.8s cubic-bezier(.4,0,.2,1); }
+.chart-bar-pct { font-size:0.75rem; color:var(--primary-dark); font-weight:700; width:42px; flex-shrink:0; }
+
+/* 選択肢 */
+.choices { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.choice-btn { width:100%; padding:12px 16px; border:2px solid rgba(183,65,14,0.2); border-radius:6px; background:white; font-size:0.93rem; text-align:left; cursor:pointer; transition:all 0.2s; font-family:'Noto Sans JP',sans-serif; color:var(--ink); position:relative; }
+.choice-btn:hover:not(:disabled) { border-color:var(--primary); background:var(--parchment2); transform:translateX(4px); }
+.choice-btn.correct  { border-color:var(--success); background:#e8f5e9; color:#1b5e20; font-weight:700; }
+.choice-btn.wrong    { border-color:var(--danger);  background:#ffebee; color:#b71c1c; font-weight:700; }
+.choice-btn.show-ans { border-color:var(--success); background:#e8f5e9; color:#1b5e20; }
+.choice-btn:disabled { cursor:default; }
+.c-icon { position:absolute; right:12px; top:50%; transform:translateY(-50%); }
+
+/* テキスト入力 */
+.text-input-area { margin-bottom:10px; }
+.text-input-area input { width:100%; padding:12px 14px; border:2px solid rgba(183,65,14,0.22); border-radius:6px; font-size:1rem; font-family:'Noto Sans JP',sans-serif; outline:none; background:white; transition:border-color 0.2s; color:var(--ink); }
+.text-input-area input:focus { border-color:var(--primary); }
+.text-input-area input.correct { border-color:var(--success); background:#e8f5e9; }
+.text-input-area input.wrong   { border-color:var(--danger);  background:#ffebee; }
+
+.hint-row { margin:6px 0; }
+.hint-btn { display:inline-flex; align-items:center; gap:4px; padding:5px 14px; background:rgba(249,168,37,0.1); border:1.5px dashed var(--gold-dark); border-radius:999px; font-size:0.78rem; color:#a07020; cursor:pointer; font-family:'Noto Sans JP',sans-serif; font-weight:700; transition:background 0.2s; }
+.hint-btn:hover { background:rgba(249,168,37,0.2); }
+.hint-btn:disabled { opacity:0.5; cursor:default; }
+.hint-box { display:none; margin-top:6px; padding:8px 12px; background:rgba(249,168,37,0.08); border-left:3px solid var(--gold-dark); border-radius:4px; font-size:0.8rem; color:#7a5010; }
+.hint-box.show { display:block; animation:slideIn 0.2s ease; }
+
+.feedback { display:none; padding:12px 14px; border-radius:6px; margin-bottom:12px; font-size:0.88rem; line-height:1.65; animation:slideIn 0.3s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);} }
+.feedback.correct { background:#e8f5e9; color:#1b5e20; border-left:4px solid var(--success); }
+.feedback.wrong   { background:#ffebee; color:#b71c1c; border-left:4px solid var(--danger); }
+.feedback.show { display:block; }
+.fb-title { font-weight:700; font-size:0.95rem; margin-bottom:4px; }
+.fb-exp { font-size:0.8rem; margin-top:4px; }
+.fb-explain { font-size:0.83rem; color:#555; margin-top:6px; line-height:1.6; }
+
+.btn { width:100%; padding:13px; border:none; border-radius:6px; font-size:0.95rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:all 0.2s; }
+.btn-primary { background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; box-shadow:0 3px 12px rgba(232,98,42,0.3); }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 5px 16px rgba(232,98,42,0.4); }
+.btn-secondary { background:linear-gradient(135deg,#01579b,var(--accent)); color:white; }
+.btn:disabled { opacity:0.6; cursor:default; transform:none !important; }
+
+/* ===== RESULT ===== */
+#result-screen { display:none; width:100%; max-width:540px; padding:40px 16px 60px; position:relative; z-index:1; text-align:center; }
+.result-emblem { font-size:4rem; margin-bottom:12px; }
+.result-title { font-family:'Kaisei Decol',serif; font-size:1.5rem; color:#ffb07a; margin-bottom:4px; }
+.result-title-display { display:inline-block; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; font-size:0.9rem; font-weight:700; padding:4px 16px; border-radius:999px; margin-bottom:16px; }
+.result-card { background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:20px; margin-bottom:16px; }
+.result-score { font-family:'Kaisei Decol',serif; font-size:3rem; color:var(--ink); font-weight:700; }
+.result-score span { font-size:1rem; color:var(--primary); font-weight:400; }
+.result-level-row { display:flex; align-items:center; justify-content:center; gap:16px; margin:12px 0; flex-wrap:wrap; }
+.rl-item { text-align:center; }
+.rl-label { font-size:0.7rem; color:var(--primary); }
+.rl-val { font-size:1.2rem; font-weight:700; color:var(--ink); }
+.result-msg { font-size:0.9rem; color:#5a2a0e; line-height:1.7; margin:12px 0; }
+.result-table { width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left; margin-top:12px; }
+.result-table th { background:rgba(183,65,14,0.1); padding:7px 10px; color:#5a2a0e; font-weight:700; }
+.result-table td { padding:7px 10px; border-bottom:1px solid rgba(183,65,14,0.1); }
+.result-table .ok  { color:var(--success); font-weight:700; }
+.result-table .bad { color:var(--danger);  font-weight:700; }
+.title-collection { background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:16px; margin-bottom:16px; }
+.tc-header { font-family:'Kaisei Decol',serif; font-size:1rem; color:var(--ink); margin-bottom:10px; }
+.tc-grid { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+.tc-badge { padding:4px 12px; border-radius:999px; font-size:0.78rem; font-weight:700; }
+.tc-badge.earned { background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; }
+.tc-badge.locked { background:rgba(183,65,14,0.1); color:#c0905a; border:1px dashed rgba(183,65,14,0.25); }
+.stars { font-size:1.8rem; letter-spacing:4px; margin:8px 0; }
+.result-btns { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+</style>
+</head>
+<body>
+
+<!-- レベルアップ -->
+<div id="levelup-overlay">
+  <div class="levelup-ring"><div class="levelup-emoji">⛏️</div></div>
+  <div class="levelup-text">LEVEL UP！</div>
+  <div class="levelup-level" id="lu-level">Lv.2 になった！</div>
+  <div class="levelup-title" id="lu-title"></div>
+  <button class="btn-levelup-ok" onclick="closeLevelup()">よし！続けるぞ ▶</button>
+</div>
+
+<!-- 称号 -->
+<div id="title-overlay">
+  <div class="title-scroll">
+    <div class="title-new">🎊 称号獲得！</div>
+    <div class="title-emoji" id="to-emoji">⚡</div>
+    <div class="title-main" id="to-title"></div>
+    <div class="title-desc" id="to-desc"></div>
+    <button class="btn-title-ok" onclick="closeTitleOverlay()">受け取る！</button>
+  </div>
+</div>
+
+<!-- INTRO -->
+<div id="intro-screen">
+  <div style="height:40px"></div>
+  <div class="intro-emblem">⚡</div>
+  <div class="intro-title">鉱産資源・電力<br>クイズ</div>
+  <div class="intro-sub">１２月の演習から出題！</div>
+  <div class="intro-card">
+    <div class="intro-tags">
+      <span class="itag">🎯 全20問</span>
+      <span class="itag">⏱ 約5分</span>
+      <span class="itag">📚 小4 社会</span>
+    </div>
+    <div class="intro-desc">
+      経験値を手に入れてレベルアップ！<br>
+      全ての称号を手に入れよう！
+    </div>
+  </div>
+  <button class="btn-start" onclick="startQuiz()">スタート！ 🚀</button>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz-screen">
+  <div id="hud">
+    <div class="hud-top">
+      <div class="hud-level" id="hud-level">⛏️ Lv.1 資源見習い</div>
+      <div class="hud-score-chips">
+        <div class="hud-chip ok">✅ <span id="hud-ok">0</span></div>
+        <div class="hud-chip ng">❌ <span id="hud-ng">0</span></div>
+      </div>
+    </div>
+    <div class="exp-bar-wrap">
+      <div class="exp-label" id="exp-text">EXP 0/50</div>
+      <div class="exp-bar-bg"><div class="exp-bar-fill" id="exp-fill" style="width:0%"></div></div>
+      <div class="hud-title-badge" id="hud-title-badge">資源見習い</div>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div style="padding:0 16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:999px;overflow:hidden;">
+        <div id="prog-fill" style="height:100%;background:linear-gradient(90deg,var(--primary-dark),var(--primary-light));border-radius:999px;transition:width 0.5s;width:0%"></div>
+      </div>
+      <div style="font-size:0.75rem;color:#ffb07a;white-space:nowrap;" id="prog-label">0/20</div>
+    </div>
+  </div>
+
+  <div class="q-card" id="q-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <span class="section-badge" id="q-section">大問1</span>
+      <div class="q-meta" style="margin-bottom:0;flex:1;">
+        <span class="q-num" id="q-num">問1 / 20</span>
+        <span class="q-type-badge" id="q-type-badge">選択</span>
+      </div>
+    </div>
+    <div class="q-text" id="q-text"></div>
+    <div id="chart-area"></div>
+    <div id="choices-wrap"></div>
+    <div id="text-input-wrap" style="display:none">
+      <div class="text-input-area">
+        <input type="text" id="text-ans" placeholder="答えを入力…" autocomplete="off">
+      </div>
+      <div class="hint-row">
+        <button class="hint-btn" id="hint-btn" onclick="showHint()">💡 ヒントを見る</button>
+        <div class="hint-box" id="hint-box"></div>
+      </div>
+      <button class="btn btn-secondary" id="submit-btn" onclick="submitText()" style="margin-bottom:10px;">答え合わせ ✔</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()" style="display:none;">次の問題へ →</button>
+  </div>
+  <div style="height:32px"></div>
+</div>
+
+<!-- RESULT -->
+<div id="result-screen">
+  <div class="result-emblem" id="res-emoji">🏆</div>
+  <div class="result-title">クイズ完了！</div>
+  <div class="stars" id="res-stars">⭐⭐⭐</div>
+  <div class="result-title-display" id="res-title-disp">⚡ エネルギー大臣</div>
+  <div class="result-card">
+    <div class="result-score" id="res-score">0<span> / 20問正解</span></div>
+    <div class="result-level-row">
+      <div class="rl-item"><div class="rl-label">最終レベル</div><div class="rl-val" id="res-level">Lv.1</div></div>
+      <div class="rl-item"><div class="rl-label">獲得EXP</div><div class="rl-val" id="res-exp">0</div></div>
+      <div class="rl-item"><div class="rl-label">正答率</div><div class="rl-val" id="res-pct">0%</div></div>
+    </div>
+    <div class="result-msg" id="res-msg"></div>
+  </div>
+  <div class="title-collection">
+    <div class="tc-header">📜 称号コレクション</div>
+    <div class="tc-grid" id="tc-grid"></div>
+  </div>
+  <div class="result-card">
+    <table class="result-table">
+      <thead><tr><th>#</th><th>問題</th><th>結果</th></tr></thead>
+      <tbody id="res-tbody"></tbody>
+    </table>
+  </div>
+  <div class="result-btns">
+    <button class="btn btn-primary" onclick="restartQuiz()">もう一度やる 🔄</button>
+    <button class="btn btn-secondary" onclick="reviewWrong()" id="review-btn">❌ 間違えた問題だけやる</button>
+  </div>
+</div>
+
+<script>
+// ===== RPGシステム =====
+const LEVELS = [
+  { lv:1, need:0,   title:'資源見習い',     emoji:'⛏️' },
+  { lv:2, need:30,  title:'石炭掘り師',     emoji:'🪨' },
+  { lv:3, need:80,  title:'石油探検家',     emoji:'🛢️' },
+  { lv:4, need:150, title:'鉄鉱石の匠',     emoji:'⚙️' },
+  { lv:5, need:250, title:'エネルギー商人', emoji:'💡' },
+  { lv:6, need:380, title:'発電の賢者',     emoji:'⚡' },
+  { lv:7, need:550, title:'エネルギー大臣', emoji:'🌏' },
+];
+
+const TITLES = [
+  { id:'start',    emoji:'⛏️', name:'資源見習い',     desc:'クイズに挑戦した！',        cond:(r,c,w)=>true },
+  { id:'noerror',  emoji:'🏹', name:'無傷の探検家',   desc:'1問もミスせずにクリア！',   cond:(r,c,w)=>w===0 && r.length===r.filter(x=>x).length },
+  { id:'half',     emoji:'🛢️', name:'石油王見習い',   desc:'半分以上正解した！',        cond:(r,c,w)=>c>=Math.ceil(r.length/2) },
+  { id:'speed',    emoji:'⚡', name:'知の探求者',     desc:'15問以上正解した！',        cond:(r,c,w)=>c>=15 },
+  { id:'allclear', emoji:'🌏', name:'エネルギー大臣', desc:'全問正解！最高の称号！',    cond:(r,c,w)=>w===0 && c===r.length },
+];
+
+let exp=0, currentLevel=1, earnedTitles=[];
+
+function getLevel(e){ let lv=LEVELS[0]; for(const l of LEVELS){ if(e>=l.need) lv=l; } return lv; }
+function addExp(amount){
+  const prev=getLevel(exp); exp+=amount; const next=getLevel(exp); updateHUD();
+  if(next.lv>prev.lv){ showLevelup(next); return true; } return false;
+}
+function updateHUD(){
+  const lv=getLevel(exp); const nextLv=LEVELS.find(l=>l.lv===lv.lv+1);
+  const expInLv=exp-lv.need; const expNeeded=nextLv?nextLv.need-lv.need:999;
+  const pct=nextLv?Math.min((expInLv/expNeeded)*100,100):100;
+  document.getElementById('hud-level').textContent=`${lv.emoji} Lv.${lv.lv} ${lv.title}`;
+  document.getElementById('hud-title-badge').textContent=lv.title;
+  document.getElementById('exp-fill').style.width=pct+'%';
+  document.getElementById('exp-text').textContent=nextLv?`EXP ${expInLv}/${expNeeded}`:'MAX';
+  currentLevel=lv.lv;
+}
+function showLevelup(lv){
+  document.getElementById('lu-level').textContent=`Lv.${lv.lv} になった！`;
+  document.getElementById('lu-title').textContent=`${lv.emoji} 称号「${lv.title}」を獲得！`;
+  document.getElementById('levelup-overlay').classList.add('show');
+}
+function closeLevelup(){ document.getElementById('levelup-overlay').classList.remove('show'); }
+let titleCallback=null;
+function showTitleOverlay(t,cb){
+  document.getElementById('to-emoji').textContent=t.emoji;
+  document.getElementById('to-title').textContent=t.name;
+  document.getElementById('to-desc').textContent=t.desc;
+  document.getElementById('title-overlay').classList.add('show');
+  titleCallback=cb||null;
+}
+function closeTitleOverlay(){
+  document.getElementById('title-overlay').classList.remove('show');
+  if(titleCallback){ titleCallback(); titleCallback=null; }
+}
+
+// ===== 問題データ =====
+const ALL_QUESTIONS = [
+  // 大問1
+  { id:1, section:'大問1', type:'text',
+    text:'産業革命から1960年代までエネルギーの中心となった資源を何といいますか？',
+    answer:'石炭', hint:'黒くて燃える岩石。昔の蒸気機関車の燃料にも使われた',
+    explanation:'石炭（せきたん）は産業革命のエネルギー源として重要でした。現在は発電などに使われますが、かつては工場や機関車の燃料として世界を動かしていました。',
+    exp:10 },
+  { id:2, section:'大問1', type:'text',
+    text:'パソコンや携帯電話、ゲーム機にも使われている貴重な金属の総称を何といいますか？',
+    answer:'レアメタル', hint:'「希少な金属」という意味',
+    explanation:'レアメタルは産出量が少なく、スマートフォンや電気自動車のバッテリーなどに欠かせない希少金属の総称です。日本は多くをアフリカや中国などから輸入しています。',
+    exp:10 },
+  { id:3, section:'大問1', type:'text',
+    text:'都市全体に貴重な資源が多く眠っていることを、「鉱山」という言葉を使って何といいますか？',
+    answer:'都市鉱山', hint:'「都市」＋「鉱山」。廃棄された電子機器の中にレアメタルが眠っている',
+    explanation:'都市鉱山（としこうざん）とは、使用済みの家電や電子機器に含まれるレアメタルなどの資源を「鉱山」に例えた言葉です。リサイクルによって資源を回収する取り組みが進んでいます。',
+    exp:10 },
+  { id:4, section:'大問1', type:'text',
+    text:'水力発電を行うために川の上流に作られ、水をせき止めておく施設を何といいますか？',
+    answer:'ダム', hint:'大きなコンクリートの壁で水をせき止める施設',
+    explanation:'ダムは川をせき止めて大量の水を蓄え、その水を落とす力（位置エネルギー）を使って発電する水力発電に利用されます。洪水の防止や農業用水の確保にも役立っています。',
+    exp:10 },
+  { id:5, section:'大問1', type:'text',
+    text:'プルトニウムとともに、原子力発電の燃料となる物質を何といいますか？',
+    answer:'ウラン', hint:'原子力発電の燃料',
+    explanation:'ウランは原子力発電の主な燃料です。ウランの原子核が分裂するときに出る熱を使って蒸気を作り、タービンを回して発電します。少量で大きなエネルギーを取り出せます。',
+    exp:10 },
+  { id:6, section:'大問1', type:'text',
+    text:'日本の火力発電所や原子力発電所は、発電の際に出た熱を冷やすために多くの水を必要とすることから、どこの近くに作られることが多いですか？',
+    answer:'海', hint:'発電所の冷却水として使う。日本の地図で発電所の位置を確認しよう',
+    explanation:'火力発電所・原子力発電所は大量の冷却水が必要なため、海沿いに建設されることが多いです。海水を取り込んで冷却に使い、温まった水を海に戻します。',
+    exp:10 },
+
+  // 大問2（グラフ問題）
+  { id:7, section:'大問2', type:'chart',
+    text:'下のグラフは日本の石炭の輸入先の割合を示しています。最も多く輸入している国（？？？）はどこですか？',
+    hint:'石炭・鉄鉱石ともに輸入先1位の国。南半球にある英語圏の国。カンガルーで有名',
+    chartData:[
+      { label:'？？？',       value:66.4, color:'#b7410e' },
+      { label:'インドネシア', value:14.1, color:'#e8622a' },
+      { label:'ロシア',       value:6.3,  color:'#6a1b9a' },
+      { label:'カナダ',       value:5.8,  color:'#1565c0' },
+      { label:'その他',       value:7.4,  color:'#90a4ae' },
+    ],
+    choices:['ブラジル','中国','オーストラリア','アメリカ'],
+    answer:'オーストラリア',
+    explanation:'オーストラリアは日本の石炭輸入先の第1位（66.4%）です。広大な国土に豊富な石炭が埋蔵されており、日本との距離も比較的近いため主要な輸入先となっています。',
+    exp:10 },
+  { id:8, section:'大問2', type:'chart',
+    text:'下のグラフは日本の原油の輸入先の割合を示しています。最も多く輸入している国（？？？）はどこですか？',
+    hint:'「アラビア」という言葉が入る中東の国。石油の産出量が世界トップクラス',
+    chartData:[
+      { label:'？？？',           value:38.1, color:'#b7410e' },
+      { label:'アラブ首長国連邦', value:37.9, color:'#e8622a' },
+      { label:'クウェート',       value:8.1,  color:'#6a1b9a' },
+      { label:'カタール',         value:7.3,  color:'#1565c0' },
+      { label:'その他',           value:8.6,  color:'#90a4ae' },
+    ],
+    choices:['イラン','サウジアラビア','ロシア','アメリカ'],
+    answer:'サウジアラビア',
+    explanation:'サウジアラビアは日本の原油輸入先の第1位（38.1%）です。中東の国々（サウジアラビア・アラブ首長国連邦・クウェートなど）で日本の原油輸入の約9割を占めています。中東への依存度が高いため、エネルギー安全保障の課題となっています。',
+    exp:10 },
+  { id:9, section:'大問2', type:'chart',
+    text:'下のグラフは日本の鉄鉱石の輸入先の割合を示しています。最も多く輸入している国（？？？）はどこですか？',
+    hint:'石炭でも輸入先1位の国。南半球にある英語圏の国',
+    chartData:[
+      { label:'？？？', value:59.9, color:'#b7410e' },
+      { label:'ブラジル',value:28.0, color:'#e8622a' },
+      { label:'カナダ',  value:6.5,  color:'#1565c0' },
+      { label:'その他',  value:5.6,  color:'#90a4ae' },
+    ],
+    choices:['インド','中国','オーストラリア','アメリカ'],
+    answer:'オーストラリア',
+    explanation:'オーストラリアは日本の鉄鉱石輸入先の第1位（59.9%）です。鉄鉱石は鉄鋼（鉄）の原料で、自動車・建物・橋などの製造に欠かせません。オーストラリアには世界最大級の鉄鉱石の鉱山があります。',
+    exp:10 },
+  { id:10, section:'大問2', type:'chart',
+    text:'下のグラフは日本の鉄鉱石の輸入先の割合を示しています。2番目に多く輸入している国（？？？）はどこですか？',
+    hint:'南アメリカ最大の国。コーヒーやサッカーでも有名',
+    chartData:[
+      { label:'オーストラリア', value:59.9, color:'#b7410e' },
+      { label:'？？？',          value:28.0, color:'#e8622a' },
+      { label:'カナダ',          value:6.5,  color:'#1565c0' },
+      { label:'その他',          value:5.6,  color:'#90a4ae' },
+    ],
+    choices:['インド','ブラジル','チリ','アルゼンチン'],
+    answer:'ブラジル',
+    explanation:'ブラジルは日本の鉄鉱石輸入先の第2位（28.0%）です。南アメリカ最大の国で、カラジャスなどの世界的な鉄鉱石の産地があります。遠い距離にもかかわらず、豊富な埋蔵量から多く輸入されています。',
+    exp:10 },
+  { id:11, section:'大問2', type:'chart',
+    text:'下のグラフは日本の銅の輸入先の割合を示しています。最も多く輸入している国（？？？）はどこですか？',
+    hint:'南アメリカ西側にある細長い国。銅の産出量が世界一',
+    chartData:[
+      { label:'？？？',       value:45, color:'#b7410e' },
+      { label:'ペルー',       value:13, color:'#e8622a' },
+      { label:'カナダ',       value:11, color:'#1565c0' },
+      { label:'インドネシア', value:11, color:'#6a1b9a' },
+      { label:'オーストラリア',value:7, color:'#2e7d32' },
+      { label:'その他',       value:13, color:'#90a4ae' },
+    ],
+    choices:['ブラジル','メキシコ','チリ','ボリビア'],
+    answer:'チリ',
+    explanation:'チリは日本の銅輸入先の第1位（45%）です。南アメリカ西側の細長い国で、世界最大の銅の産出国です。銅は電気の配線・電子機器・硬貨などに使われる身近な金属です。',
+    exp:10 },
+  { id:12, section:'大問2', type:'text',
+    text:'原油を精製して得られる、自動車などの燃料となるものは何ですか？',
+    answer:'ガソリン', hint:'車に入れる燃料',
+    explanation:'ガソリンは原油を精製（せいせい）して作られる燃料です。原油からはガソリンのほか、灯油・軽油・プラスチックの原料なども作られます。',
+    exp:8 },
+  { id:13, section:'大問2', type:'text',
+    text:'日本のエネルギー資源全体の中で最も多くの割合を占める資源は何ですか？',
+    answer:'石油', answers:['石油','原油'],
+    hint:'液体の黒い資源。中東から多く輸入している',
+    explanation:'石油（原油）は日本のエネルギー資源の中で最大の割合を占めています。ガソリン・灯油・プラスチックなど様々な製品の原料となり、現代社会に欠かせない資源です。',
+    exp:8 },
+  { id:14, section:'大問2', type:'text',
+    text:'原油の多くはタンカーという船によって運ばれます。その際に通る、インド洋と太平洋をつなぐ海峡はどこですか？',
+    answer:'マラッカ海峡', hint:'マレーシアとインドネシアの間にある海峡',
+    explanation:'マラッカ海峡（まらっかかいきょう）はマレーシアとインドネシアの間にある細い海峡で、中東からの石油タンカーが通る重要な航路です。日本のエネルギー輸送において非常に重要な場所です。',
+    exp:8 },
+
+  // 大問3
+  { id:15, section:'大問3', type:'choice',
+    text:'火力発電で使われる燃料は何ですか？当てはまるものを選びなさい。',
+    choices:['石炭と石油と天然ガス','石炭と鉄鉱石と石油','ウランとプルトニウム','石炭のみ'],
+    answer:'石炭と石油と天然ガス',
+    explanation:'火力発電は石炭・石油・天然ガスなどの化石燃料を燃やして蒸気を作り、タービンを回して発電します。これらの燃料を燃やすと二酸化炭素が排出され、地球温暖化の原因となります。',
+    exp:10 },
+  { id:16, section:'大問3', type:'text',
+    text:'地面の中から取り出した蒸気や熱水を利用して発電する方法を何といいますか？',
+    answer:'地熱発電', hint:'「地面の熱」を使う発電',
+    explanation:'地熱発電（ちねつはつでん）は火山活動などによって地下に蓄えられた熱エネルギーを使って発電する方法です。二酸化炭素を出さない再生可能エネルギーで、温泉地が多い日本に向いている発電方法です。',
+    exp:10 },
+  { id:17, section:'大問3', type:'text',
+    text:'風の力を利用し、風車を回して発電する方法を何といいますか？',
+    answer:'風力発電', hint:'「風」の「力」を使う発電',
+    explanation:'風力発電（ふうりょくはつでん）は風の力でプロペラ（風車）を回し、電気を作る発電方法です。二酸化炭素を排出せず、燃料費もかかりません。ただし、風がなければ発電できないという欠点もあります。',
+    exp:10 },
+  { id:18, section:'大問3', type:'text',
+    text:'太陽の光を利用し、パネルの中の太陽電池で発電する方法を何といいますか？',
+    answer:'太陽光発電', hint:'「太陽の光」を使う発電',
+    explanation:'太陽光発電（たいようこうはつでん）は太陽の光エネルギーを太陽電池パネルで直接電気に変える発電方法です。住宅の屋根にも設置でき、家庭でも発電できます。天気に左右されるという課題もあります。',
+    exp:10 },
+  { id:19, section:'大問3', type:'text',
+    text:'2011年3月11日に起きた、福島県の原子力発電所で放射性物質がもれる事故の原因となった大きな地震・津波の災害を何といいますか？',
+    answer:'東日本大震災', hint:'2011年3月11日に起きた日本史上最大規模の地震災害',
+    explanation:'東日本大震災（ひがしにほんだいしんさい）は2011年3月11日に発生したマグニチュード9.0の大地震と津波による大規模災害です。福島第一原子力発電所の事故を引き起こし、原子力発電の安全性について日本全体で大きく議論されるようになりました。',
+    exp:10 },
+  { id:20, section:'大問3', type:'choice',
+    text:'現在の日本で火力発電と原子力発電をやめてしまうのが難しい理由として正しいものはどれですか？',
+    choices:[
+      '現在の発電は火力と原子力がほとんどで、やめると必要な電力が不足してしまうから',
+      '火力発電と原子力発電は環境にやさしいから',
+      '再生可能エネルギーは日本では利用できないから',
+      '天然ガスは日本で大量に産出されるから',
+    ],
+    answer:'現在の発電は火力と原子力がほとんどで、やめると必要な電力が不足してしまうから',
+    explanation:'日本の発電の大部分は火力発電と原子力発電が占めています。再生可能エネルギーへの転換が進んでいますが、まだ割合が小さいため、いきなり火力・原子力をやめると電力が不足してしまいます。バランスよく進めていくことが大切です。',
+    exp:10 },
+];
+
+// ===== ゲーム状態 =====
+let questions=[], currentIndex=0, correctCount=0, wrongCount=0, answered=false, results=[];
+
+function startQuiz(questionSet){
+  const isReview=!!questionSet;
+  questions=questionSet||[...ALL_QUESTIONS].sort(()=>Math.random()-0.5);
+  currentIndex=0; correctCount=0; wrongCount=0; results=[]; answered=false; exp=0;
+  if(!isReview) earnedTitles=[];
+  document.getElementById('intro-screen').style.display='none';
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('quiz-screen').style.display='block';
+  document.getElementById('hud').style.display='block';
+  updateHUD(); renderQuestion();
+  if(!isReview && !earnedTitles.includes(TITLES[0].id)){
+    setTimeout(()=>{ showTitleOverlay(TITLES[0]); earnedTitles.push(TITLES[0].id); },600);
+  }
+}
+
+function renderQuestion(){
+  const q=questions[currentIndex];
+  answered=false;
+  const card=document.getElementById('q-card');
+  card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  document.getElementById('q-section').textContent=q.section;
+  document.getElementById('q-num').textContent=`問${currentIndex+1} / ${questions.length}`;
+  document.getElementById('q-text').textContent=q.text;
+  const tb=document.getElementById('q-type-badge');
+  if(q.type==='choice'||q.type==='chart'){ tb.textContent='選択'; tb.className='q-type-badge choice'; }
+  else{ tb.textContent='記述'; tb.className='q-type-badge text'; }
+  const fb=document.getElementById('feedback');
+  fb.className='feedback'; fb.innerHTML='';
+  document.getElementById('next-btn').style.display='none';
+  const choicesWrap=document.getElementById('choices-wrap');
+  const textWrap=document.getElementById('text-input-wrap');
+  const chartArea=document.getElementById('chart-area');
+  choicesWrap.innerHTML=''; textWrap.style.display='none'; chartArea.innerHTML='';
+
+  if(q.type==='chart'){
+    let html=`<div class="chart-wrap"><div class="chart-title">📊 ${q.chartTitle||'輸入先の割合'}</div>`;
+    q.chartData.forEach(d=>{
+      html+=`<div class="chart-bar-row">
+        <div class="chart-bar-label">${d.label}</div>
+        <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${d.value}%;background:${d.color};">${d.value}%</div></div>
+        <div class="chart-bar-pct">${d.value}%</div>
+      </div>`;
+    });
+    html+=`</div>`;
+    chartArea.innerHTML=html;
+    if(q.hint){
+      const hintWrap=document.createElement('div');
+      hintWrap.className='hint-row';
+      hintWrap.innerHTML=`<button class="hint-btn" id="hint-btn-chart" onclick="showHint()">💡 ヒントを見る</button><div class="hint-box" id="hint-box-chart"></div>`;
+      chartArea.appendChild(hintWrap);
+    }
+    renderChoices(q,choicesWrap);
+  } else if(q.type==='choice'){
+    renderChoices(q,choicesWrap);
+  } else {
+    textWrap.style.display='block';
+    const input=document.getElementById('text-ans');
+    input.value=''; input.className=''; input.disabled=false;
+    const hintBtn=document.getElementById('hint-btn');
+    const hintBox=document.getElementById('hint-box');
+    hintBox.textContent=''; hintBox.classList.remove('show');
+    if(q.hint){ hintBtn.style.display=''; hintBtn.disabled=false; hintBtn.textContent='💡 ヒントを見る'; }
+    else{ hintBtn.style.display='none'; }
+    document.getElementById('submit-btn').disabled=false;
+    setTimeout(()=>input.focus(),100);
+    input.onkeydown=e=>{ if(e.key==='Enter') submitText(); };
+  }
+  updateProgress();
+}
+
+function renderChoices(q,wrap){
+  const div=document.createElement('div');
+  div.className='choices';
+  const list=q.ordered?[...q.choices]:[...q.choices].sort(()=>Math.random()-0.5);
+  list.forEach(ch=>{
+    const btn=document.createElement('button');
+    btn.className='choice-btn'; btn.textContent=ch;
+    btn.onclick=()=>selectChoice(btn,ch,q);
+    div.appendChild(btn);
+  });
+  wrap.appendChild(div);
+}
+
+function selectChoice(btn,choice,q){
+  if(answered) return;
+  answered=true;
+  const isCorrect=(choice===q.answer);
+  document.querySelectorAll('.choice-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.textContent===q.answer){ b.classList.add('show-ans'); b.innerHTML+=`<span class="c-icon">✅</span>`; }
+  });
+  if(!isCorrect){ btn.classList.remove('show-ans'); btn.classList.add('wrong'); btn.innerHTML=btn.textContent.replace('<span class="c-icon">✅</span>','')+`<span class="c-icon">❌</span>`; }
+  else{ btn.classList.add('correct'); }
+  processAnswer(isCorrect,choice,q);
+}
+
+function showHint(){
+  const q=questions[currentIndex];
+  const hintBox=q.type==='chart'?document.getElementById('hint-box-chart'):document.getElementById('hint-box');
+  const hintBtn=q.type==='chart'?document.getElementById('hint-btn-chart'):document.getElementById('hint-btn');
+  if(!hintBox||!hintBtn) return;
+  hintBox.textContent=`💡 ヒント：${q.hint}`; hintBox.classList.add('show');
+  hintBtn.disabled=true; hintBtn.textContent='💡 ヒントを見た';
+}
+
+function submitText(){
+  if(answered) return;
+  const q=questions[currentIndex];
+  const input=document.getElementById('text-ans');
+  const userAns=input.value.trim();
+  if(!userAns){ input.style.borderColor='orange'; setTimeout(()=>input.style.borderColor='',600); return; }
+  answered=true;
+  document.getElementById('submit-btn').disabled=true;
+  input.disabled=true;
+  const norm=s=>s.replace(/\s|　/g,'').replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[Ａ-Ｚａ-ｚ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).toLowerCase();
+  const correctList=Array.isArray(q.answers)?q.answers:[q.answer];
+  const isCorrect=correctList.some(a=>norm(userAns)===norm(a));
+  input.className=isCorrect?'correct':'wrong';
+  processAnswer(isCorrect,userAns,q);
+}
+
+function processAnswer(isCorrect,userAns,q){
+  if(isCorrect){ correctCount++; document.getElementById('hud-ok').textContent=correctCount; }
+  else{ wrongCount++; document.getElementById('hud-ng').textContent=wrongCount; }
+  results.push({q,isCorrect,userAnswer:userAns});
+  const gained=isCorrect?q.exp:Math.floor(q.exp*0.2);
+  addExp(gained);
+  showFeedback(isCorrect,q,gained);
+  document.getElementById('next-btn').style.display='block';
+}
+
+function showFeedback(isCorrect,q,gained){
+  const fb=document.getElementById('feedback');
+  fb.className='feedback '+(isCorrect?'correct':'wrong')+' show';
+  const correctList=Array.isArray(q.answers)?q.answers:[q.answer];
+  const answerDisp=correctList.join('」または「');
+  fb.innerHTML=`
+    <div class="fb-title">${isCorrect?'🎉 正解！':`❌ 不正解… 正解は「${answerDisp}」`}</div>
+    <div class="fb-exp">${isCorrect?`✨ +${gained} EXP 獲得！`:`💧 +${gained} EXP（参加ポイント）`}</div>
+    <div class="fb-explain">📖 ${q.explanation}</div>
+  `;
+}
+
+function nextQuestion(){
+  if(currentIndex+1>=questions.length) showResult();
+  else{ currentIndex++; renderQuestion(); }
+}
+
+function updateProgress(){
+  const pct=(currentIndex/questions.length)*100;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-label').textContent=`${currentIndex}/${questions.length}`;
+}
+
+function showResult(){
+  document.getElementById('quiz-screen').style.display='none';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('result-screen').style.display='block';
+  const total=questions.length; const pct=correctCount/total; const lv=getLevel(exp);
+  let emoji,stars,msg;
+  if(pct>=1.0)      { emoji='🏆'; stars='⭐⭐⭐'; msg='全問正解！完璧だ！エネルギー大臣の称号は伊達じゃない！✨'; }
+  else if(pct>=0.8) { emoji='😄'; stars='⭐⭐';   msg='よくできた！あと少しで満点。間違えた問題を確認しよう！'; }
+  else if(pct>=0.5) { emoji='😊'; stars='⭐';     msg='がんばった！半分以上正解。復習してもう一度挑戦！'; }
+  else              { emoji='💪'; stars='';        msg='まだ覚えていないところがあるね。一つずつ確認しよう！'; }
+  document.getElementById('res-emoji').textContent=emoji;
+  document.getElementById('res-stars').textContent=stars;
+  document.getElementById('res-score').innerHTML=`${correctCount}<span> / ${total}問正解</span>`;
+  document.getElementById('res-msg').textContent=msg;
+  document.getElementById('res-level').textContent=`Lv.${lv.lv}`;
+  document.getElementById('res-exp').textContent=exp;
+  document.getElementById('res-pct').textContent=Math.round(pct*100)+'%';
+
+  const newTitles=TITLES.filter(t=>t.id!=='start'&&!earnedTitles.includes(t.id)&&t.cond(results.map(r=>r.isCorrect),correctCount,wrongCount));
+  newTitles.forEach(t=>earnedTitles.push(t.id));
+  const topTitle=[...TITLES].reverse().find(t=>earnedTitles.includes(t.id))||TITLES[0];
+  document.getElementById('res-title-disp').textContent=`${topTitle.emoji} ${topTitle.name}`;
+
+  const grid=document.getElementById('tc-grid');
+  grid.innerHTML='';
+  TITLES.forEach(t=>{
+    const span=document.createElement('span');
+    span.className='tc-badge '+(earnedTitles.includes(t.id)?'earned':'locked');
+    span.textContent=earnedTitles.includes(t.id)?`${t.emoji} ${t.name}`:'🔒 ???';
+    span.title=earnedTitles.includes(t.id)?t.desc:'未獲得';
+    grid.appendChild(span);
+  });
+
+  const tbody=document.getElementById('res-tbody');
+  tbody.innerHTML='';
+  results.forEach((r,i)=>{
+    const shortQ=r.q.text.length>20?r.q.text.slice(0,20)+'…':r.q.text;
+    const correctDisp=Array.isArray(r.q.answers)?r.q.answers[0]:r.q.answer;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td>${shortQ}</td><td class="${r.isCorrect?'ok':'bad'}">${r.isCorrect?'✅ 正解':'❌ '+correctDisp}</td>`;
+    tbody.appendChild(tr);
+    if(!r.isCorrect){
+      const expTr=document.createElement('tr');
+      expTr.style.display='none';
+      expTr.innerHTML=`<td colspan="3" style="background:#fdf3e7;padding:8px 12px;font-size:0.82rem;color:#5a2a0e;line-height:1.6;border-left:3px solid var(--primary);">📖 ${r.q.explanation}</td>`;
+      tbody.appendChild(expTr);
+      const btnTr=document.createElement('tr');
+      btnTr.innerHTML=`<td colspan="3" style="padding:4px 12px 8px;background:#ffebee;"><button style="font-size:0.78rem;padding:4px 14px;border:1.5px solid var(--gold-dark);border-radius:999px;background:#fffde7;color:#a07020;cursor:pointer;font-family:inherit;font-weight:700;">💡 解説を見る</button></td>`;
+      tbody.appendChild(btnTr);
+      btnTr.querySelector('button')._expTr=expTr;
+      btnTr.querySelector('button').onclick=function(){ toggleExp(this); };
+    }
+  });
+  document.getElementById('review-btn').style.display=results.some(r=>!r.isCorrect)?'block':'none';
+  if(newTitles.length>0){ setTimeout(()=>{ showTitleOverlay(newTitles[0]); },800); }
+}
+
+function toggleExp(btn){
+  const expTr=btn._expTr;
+  const isShown=expTr.style.display!=='none';
+  expTr.style.display=isShown?'none':'table-row';
+  btn.textContent=isShown?'💡 解説を見る':'💡 解説を閉じる';
+}
+
+function restartQuiz(){
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('intro-screen').style.display='flex';
+  document.getElementById('intro-screen').style.flexDirection='column';
+  document.getElementById('intro-screen').style.alignItems='center';
+}
+
+function reviewWrong(){
+  const wrong=results.filter(r=>!r.isCorrect).map(r=>r.q);
+  if(wrong.length>0) startQuiz(wrong);
+}
+</script>
+</body>
+</html>
