@@ -212,6 +212,7 @@ body::before {
 .tap-hint{ font-size:.7rem; opacity:.55; margin-top:10px; }
 .confetti-piece{ position:fixed; top:-12vh; width:10px; height:14px; border-radius:2px; opacity:.95; z-index:1200; pointer-events:none; animation:confettiFall linear forwards; }
 @keyframes confettiFall{ to{ transform:translateY(120vh) rotate(720deg); } }
+.title-collection{display:none !important;} #title-overlay{display:none !important;}
 </style>
 </head>
 <body>
@@ -358,11 +359,7 @@ const LEVELS = [
   { lv:7, need:550, title:'エネルギー大臣', emoji:'🌏' },
 ];
 
-const TITLES = [
-  { id:'half', emoji:'⛏️', name:'たんこう みならい', desc:'半分以上 正解！', cond:(r,c,w)=>c>=Math.ceil(r.length*0.5) },
-  { id:'eighty', emoji:'⚡', name:'はつでん 博士', desc:'8割以上 正解！', cond:(r,c,w)=>c>=Math.ceil(r.length*0.8) },
-  { id:'allclear', emoji:'👑', name:'エネルギー王', desc:'全問正解！すごい！', cond:(r,c,w)=>c===r.length },
-];
+const TITLES = [];
 
 let exp=0, currentLevel=1, earnedTitles=[];
 
@@ -750,7 +747,7 @@ function showResult(){
   const newTitles=TITLES.filter(t=>t.id!=='start'&&!earnedTitles.includes(t.id)&&t.cond(results.map(r=>r.isCorrect),correctCount,wrongCount));
   newTitles.forEach(t=>earnedTitles.push(t.id));
   const topTitle=[...TITLES].reverse().find(t=>earnedTitles.includes(t.id));
-  document.getElementById('res-title-disp').textContent=topTitle?`${topTitle.emoji} ${topTitle.name}`:'称号は おあずけ… もう一度！';
+  document.getElementById('res-title-disp').textContent=`${lv.emoji} ${lv.title}`;
 
   const grid=document.getElementById('tc-grid');
   grid.innerHTML='';
