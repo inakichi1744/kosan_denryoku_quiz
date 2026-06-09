@@ -213,6 +213,16 @@ body::before {
 .confetti-piece{ position:fixed; top:-12vh; width:10px; height:14px; border-radius:2px; opacity:.95; z-index:1200; pointer-events:none; animation:confettiFall linear forwards; }
 @keyframes confettiFall{ to{ transform:translateY(120vh) rotate(720deg); } }
 .title-collection{display:none !important;} #title-overlay{display:none !important;}
+.intro-tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
+.itag{flex:0 1 calc(50% - 3px);box-sizing:border-box;text-align:center;}
+.itag-full{flex-basis:100%;}
+#qa-popup{display:none;position:fixed;inset:0;z-index:1100;background:rgba(5,17,31,.75);align-items:center;justify-content:center;padding:24px;}
+#qa-popup.show{display:flex;}
+.qa-popup-box{background:#fff;border:2px solid var(--primary);border-radius:10px;padding:20px 18px;max-width:420px;width:100%;max-height:80vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.4);}
+.qa-popup-text{font-size:0.9rem;color:var(--ink);line-height:1.7;white-space:pre-wrap;word-break:break-word;text-align:left;}
+.qa-popup-close{margin-top:16px;width:100%;padding:10px;background:linear-gradient(135deg,var(--primary-dark),var(--primary-light));color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;}
+.result-table td.q-cell{cursor:pointer;color:var(--primary-dark);text-decoration:underline dotted;}
+.exp-col-btn{font-size:0.74rem;padding:3px 10px;border:1.5px solid var(--gold-dark);border-radius:999px;background:#fffde7;color:#a07020;cursor:pointer;font-family:inherit;font-weight:700;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -246,7 +256,7 @@ body::before {
   <div class="intro-sub">１２月の演習から出題！</div>
   <div class="intro-card">
     <div class="intro-tags">
-      <span class="itag" id="q-count-tag">🎯 全20問</span>
+      <span class="itag itag-full" id="q-count-tag">🎯 全20問</span>
       <span class="itag">石炭・石油</span>
       <span class="itag">レアメタル</span>
       <span class="itag">都市鉱山</span>
@@ -256,7 +266,7 @@ body::before {
     </div>
     <div class="intro-desc">
       経験値を手に入れてレベルアップ！<br>
-      全ての称号を手に入れよう！
+      めざせ全問正解！
     </div>
   </div>
   <button class="btn-start" onclick="startQuiz()">スタート！ 🚀</button>
@@ -337,7 +347,7 @@ body::before {
   </div>
   <div class="result-card">
     <table class="result-table">
-      <thead><tr><th>#</th><th>問題</th><th>結果</th></tr></thead>
+      <thead><tr><th>#</th><th>問題</th><th>結果</th><th>解説</th></tr></thead>
       <tbody id="res-tbody"></tbody>
     </table>
   </div>
@@ -765,19 +775,17 @@ function showResult(){
     const shortQ=r.q.text.length>20?r.q.text.slice(0,20)+'…':r.q.text;
     const correctDisp=Array.isArray(r.q.answers)?r.q.answers[0]:r.q.answer;
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${i+1}</td><td>${shortQ}</td><td class="${r.isCorrect?'ok':'bad'}">${r.isCorrect?'✅ 正解':'❌ '+correctDisp}</td>`;
-    tbody.appendChild(tr);
-    if(!r.isCorrect){
-      const expTr=document.createElement('tr');
-      expTr.style.display='none';
-      expTr.innerHTML=`<td colspan="3" style="background:#fdf3e7;padding:8px 12px;font-size:0.82rem;color:#5a2a0e;line-height:1.6;border-left:3px solid var(--primary);">📖 ${r.q.explanation}</td>`;
-      tbody.appendChild(expTr);
-      const btnTr=document.createElement('tr');
-      btnTr.innerHTML=`<td colspan="3" style="padding:4px 12px 8px;background:#ffebee;"><button style="font-size:0.78rem;padding:4px 14px;border:1.5px solid var(--gold-dark);border-radius:999px;background:#fffde7;color:#a07020;cursor:pointer;font-family:inherit;font-weight:700;">💡 解説を見る</button></td>`;
-      tbody.appendChild(btnTr);
-      btnTr.querySelector('button')._expTr=expTr;
-      btnTr.querySelector('button').onclick=function(){ toggleExp(this); };
+    tr.innerHTML=`<td>${i+1}</td><td class="q-cell"></td><td class="${r.isCorrect?'ok':'bad'}">${r.isCorrect?'✅ 正解':'❌ '+correctDisp}</td><td class="exp-cell"></td>`;
+    const qCell=tr.querySelector('.q-cell');
+    qCell.textContent=shortQ;
+    qCell.onclick=()=>openQaPopup(r.q.text, r.q.qImg||'');
+    if(r.q.explanation){
+      const correctList=Array.isArray(r.q.answers)?r.q.answers.join(' / '):r.q.answer;
+      const b=document.createElement('button'); b.className='exp-col-btn'; b.textContent='解説';
+      b.onclick=()=>openQaPopup('正解：'+correctList+'\n\n'+r.q.explanation, r.q.expImg||'');
+      tr.querySelector('.exp-cell').appendChild(b);
     }
+    tbody.appendChild(tr);
   });
   document.getElementById('review-btn').style.display=results.some(r=>!r.isCorrect)?'block':'none';
   if(newTitles.length>0){ setTimeout(()=>{ showTitleOverlay(newTitles[newTitles.length-1]); },800); }
@@ -801,6 +809,16 @@ function reviewWrong(){
   const wrong=results.filter(r=>!r.isCorrect).map(r=>r.q);
   if(wrong.length>0) startQuiz(wrong);
 }
+</script>
+<div id="qa-popup" onclick="closeQaPopup()">
+  <div class="qa-popup-box" onclick="event.stopPropagation()">
+    <div class="qa-popup-text" id="qa-popup-text"></div>
+    <button class="qa-popup-close" onclick="closeQaPopup()">✕ 閉じる</button>
+  </div>
+</div>
+<script>
+function openQaPopup(t,img){ var b=document.getElementById('qa-popup-text'); b.textContent=t; if(img){ var im=document.createElement('img'); im.src=img; im.style.cssText='width:100%;border-radius:6px;margin-top:10px;'; b.appendChild(im); } document.getElementById('qa-popup').classList.add('show'); }
+function closeQaPopup(){ document.getElementById('qa-popup').classList.remove('show'); }
 </script>
 </body>
 </html>
