@@ -742,7 +742,7 @@ function showResult(){
   document.getElementById('result-screen').style.display='block';
   const total=questions.length; const pct=correctCount/total; const lv=getLevel(exp);
   let emoji,stars,msg;
-  if(pct>=1.0)      { emoji='🏆'; stars='⭐⭐⭐'; msg='全問正解！完璧だ！エネルギー大臣の称号は伊達じゃない！✨'; }
+  if(pct>=1.0)      { emoji='🏆'; stars='⭐⭐⭐'; msg='全問正解！完璧だ！「'+lv.title+'」になった！✨'; }
   else if(pct>=0.8) { emoji='😄'; stars='⭐⭐';   msg='よくできた！あと少しで満点。間違えた問題を確認しよう！'; }
   else if(pct>=0.5) { emoji='😊'; stars='⭐';     msg='がんばった！半分以上正解。復習してもう一度挑戦！'; }
   else              { emoji='💪'; stars='';        msg='まだ覚えていないところがあるね。一つずつ確認しよう！'; }
